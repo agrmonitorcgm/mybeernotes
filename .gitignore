@@ -1,0 +1,17 @@
+.DS_Store
+*.apk
+*.aab
+*.zip
+*.bundle
+/beer-diary.html
+**/.gradle/
+**/build/
+**/manual-build-*/
+**/local.properties
+*.keystore
+*.jks
+*.idsig
+*.class
+*.dex
+.idea/
+*.iml

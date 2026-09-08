@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#f5c518"/>
+  <circle cx="132" cy="128" r="28" fill="#fff7d6" opacity=".9"/>
+  <circle cx="188" cy="104" r="38" fill="#fff7d6" opacity=".9"/>
+  <circle cx="254" cy="122" r="31" fill="#fff7d6" opacity=".9"/>
+  <text x="256" y="327" text-anchor="middle" font-family="Arial, sans-serif" font-size="188" font-weight="700" fill="#342b08">ПД</text>
+</svg>
