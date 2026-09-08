@@ -1,4 +1,5 @@
 name: Web app
+# Publishes the installable iPhone/Android web app.
 
 on:
   push:
