@@ -170,12 +170,12 @@ drop policy if exists beer_labels_edit_own on storage.objects;
 create policy beer_labels_edit_own on storage.objects for update to authenticated
 using (
   bucket_id = 'beer-labels'
-  and owner_id = auth.uid()
+  and owner_id = auth.uid()::text
   and public.is_household_member(((storage.foldername(name))[1])::uuid)
 )
 with check (
   bucket_id = 'beer-labels'
-  and owner_id = auth.uid()
+  and owner_id = auth.uid()::text
   and public.is_household_member(((storage.foldername(name))[1])::uuid)
 );
 
@@ -183,7 +183,7 @@ drop policy if exists beer_labels_delete_own on storage.objects;
 create policy beer_labels_delete_own on storage.objects for delete to authenticated
 using (
   bucket_id = 'beer-labels'
-  and owner_id = auth.uid()
+  and owner_id = auth.uid()::text
   and public.is_household_member(((storage.foldername(name))[1])::uuid)
 );
 
