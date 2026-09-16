@@ -60,7 +60,7 @@ set search_path = public
 as $$
   select exists (
     select 1 from public.household_members
-    where household_id = target_household and user_id = auth.uid()
+    where household_id::text = target_household::text and user_id::text = auth.uid()::text
   );
 $$;
 
@@ -76,7 +76,7 @@ declare
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
   if clean_name = '' then raise exception 'Display name is required'; end if;
-  if exists (select 1 from public.household_members where user_id = auth.uid()) then
+  if exists (select 1 from public.household_members where user_id::text = auth.uid()::text) then
     raise exception 'User already belongs to a diary';
   end if;
   insert into public.households (created_by) values (auth.uid()) returning * into new_household;
@@ -98,7 +98,7 @@ declare
 begin
   if auth.uid() is null then raise exception 'Authentication required'; end if;
   if clean_name = '' then raise exception 'Display name is required'; end if;
-  if exists (select 1 from public.household_members where user_id = auth.uid()) then
+  if exists (select 1 from public.household_members where user_id::text = auth.uid()::text) then
     raise exception 'User already belongs to a diary';
   end if;
   select id into target_id from public.households where invite_code = upper(trim(code));
@@ -127,7 +127,7 @@ using (public.is_household_member(household_id));
 
 drop policy if exists beer_entries_add on public.beer_entries;
 create policy beer_entries_add on public.beer_entries for insert to authenticated
-with check (public.is_household_member(household_id) and created_by = auth.uid());
+with check (public.is_household_member(household_id) and created_by::text = auth.uid()::text);
 
 drop policy if exists beer_entries_edit_own on public.beer_entries;
 drop policy if exists beer_entries_edit on public.beer_entries;
@@ -170,12 +170,12 @@ drop policy if exists beer_labels_edit_own on storage.objects;
 create policy beer_labels_edit_own on storage.objects for update to authenticated
 using (
   bucket_id = 'beer-labels'
-  and owner_id = auth.uid()::text
+  and owner_id::text = auth.uid()::text
   and public.is_household_member(((storage.foldername(name))[1])::uuid)
 )
 with check (
   bucket_id = 'beer-labels'
-  and owner_id = auth.uid()::text
+  and owner_id::text = auth.uid()::text
   and public.is_household_member(((storage.foldername(name))[1])::uuid)
 );
 
@@ -183,7 +183,7 @@ drop policy if exists beer_labels_delete_own on storage.objects;
 create policy beer_labels_delete_own on storage.objects for delete to authenticated
 using (
   bucket_id = 'beer-labels'
-  and owner_id = auth.uid()::text
+  and owner_id::text = auth.uid()::text
   and public.is_household_member(((storage.foldername(name))[1])::uuid)
 );
 
