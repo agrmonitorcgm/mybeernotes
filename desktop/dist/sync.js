@@ -64,11 +64,36 @@ class BeerDiaryCloud {
     return data;
   }
 
+  async authRequest(path, options, timeoutMs = 30000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const response = await fetch(`${this.url}/auth/v1/${path}`, {
+        ...options,
+        headers: {
+          apikey: this.key,
+          'Content-Type': 'application/json',
+          ...(options?.headers || {})
+        },
+        signal: controller.signal
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw Error(data.msg || data.message || data.error_description || data.error || `Ошибка сервера ${response.status}`);
+      return data;
+    } catch (error) {
+      if (error?.name === 'AbortError') throw Error('Сервер Supabase отвечает слишком долго. Попробуйте ещё раз через минуту.');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async resetPassword(email) {
-    const { error } = await this.client.auth.resetPasswordForEmail(email, {
-      redirectTo: `${location.origin}${location.pathname}`
+    const redirectTo = `${location.origin}${location.pathname}`;
+    await this.authRequest(`recover?redirect_to=${encodeURIComponent(redirectTo)}`, {
+      method: 'POST',
+      body: JSON.stringify({ email })
     });
-    if (error) throw error;
   }
 
   async ResetPassword(email) {
@@ -76,9 +101,16 @@ class BeerDiaryCloud {
   }
 
   async updatePassword(password) {
-    const { data, error } = await this.client.auth.updateUser({ password });
-    if (error) throw error;
-    return data;
+    const token = this.session?.access_token;
+    if (!token) throw Error('Ссылка восстановления устарела. Запросите новое письмо.');
+    const payload = await this.authRequest('user', {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ password })
+    });
+    const user = payload.user || payload;
+    if (this.session) this.session = { ...this.session, user };
+    return { user };
   }
 
   async signOut() {

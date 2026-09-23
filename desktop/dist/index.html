@@ -70,7 +70,7 @@ dialog{background:#fff8dd;border:2px solid #eadca4;border-bottom-width:6px;borde
 <div class="full"><label for="photo">Фото этикетки</label><input type="file" id="photo" accept="image/*"><p class="hint">Фото из галереи, до 20 МБ.</p><div class="label-tools"><button type="button" id="label-search">Подобрать по названию</button><span class="hint">Ищем по названию и пивоварне</span></div><div id="label-results" class="label-results" hidden><p id="label-status" class="hint" role="status"></p><div id="label-options" class="label-options"></div></div><img id="photo-preview" class="photo-preview" alt="Выбранная этикетка" hidden><p id="photo-source" class="photo-source" hidden>Фото: <a id="photo-source-link" href="https://world.openfoodfacts.org/" target="_blank" rel="noopener noreferrer">Open Food Facts</a></p><button type="button" id="remove-photo" class="quiet" hidden>Убрать фото</button></div>
 </div><p id="form-error" class="form-error" role="alert" hidden></p><div class="actions"><button type="button" id="delete" class="danger" hidden>Удалить</button><button type="button" id="cancel">Отмена</button><button type="submit" class="primary" id="save">Сохранить запись</button></div></form>
 </dialog>
-<script src="./config.js"></script><script src="./sync.js?v=6"></script><script>
+<script src="./config.js"></script><script src="./sync.js?v=7"></script><script>
 'use strict';
 const PRIMARY_TAGS=['горький','сладкий','кислый','хмельной','фруктовый'];
 const TAGS=[...PRIMARY_TAGS,'мягкий','цветочный','терпкий','крепкий','хлебный','с горчинкой','медовый','легкий','говно','ссанина','жженый','карамельный','цитрусовый','кофейный','шоколадный','дымный','пряный','сухой','водянистый','освежающий'];
@@ -161,6 +161,8 @@ function cloudError(error){
  if(/invite code not found/i.test(value))return'Код приглашения не найден.';
  if(/rate limit|security purposes/i.test(value))return'Письмо уже отправлялось недавно. Подождите немного и попробуйте снова.';
  if(/password should be at least/i.test(value))return'Пароль должен содержать не меньше 6 символов.';
+ if(/supabase отвечает слишком долго/i.test(value))return value;
+ if(/link.*expired|token.*expired|otp_expired|ссылка восстановления устарела/i.test(value))return'Ссылка восстановления устарела. Запросите новое письмо.';
  return value||'Не удалось выполнить операцию.';
 }
 function cloudViews(active){['auth-view','reset-view','household-view','connected-view'].forEach(id=>$(id).hidden=id!==active);}
@@ -287,7 +289,7 @@ function setupCloudUi(){
   if(password.length<6){cloudMessage('Пароль должен содержать не меньше 6 символов.',true);return;}
   if(password!==repeat){cloudMessage('Пароли не совпадают.',true);return;}
   setCloudBusy(true);cloudMessage('Сохраняем новый пароль…');
-  try{await saveCloudPassword(password);passwordRecovery=false;$('new-password').value='';$('new-password-repeat').value='';cloudMessage('Пароль изменён.');await refreshCloudState();}
+  try{await saveCloudPassword(password);passwordRecovery=false;$('new-password').value='';$('new-password-repeat').value='';cloudMessage('Пароль изменён. Готово.');setTimeout(()=>{if($('account-dialog').open)$('account-dialog').close();refreshCloudState();},1200);}
   catch(error){cloudMessage(cloudError(error),true);}finally{setCloudBusy(false);}
  };
  $('create-diary').onclick=async()=>{
