@@ -71,6 +71,10 @@ class BeerDiaryCloud {
     if (error) throw error;
   }
 
+  async ResetPassword(email) {
+    return this.resetPassword(email);
+  }
+
   async updatePassword(password) {
     const { data, error } = await this.client.auth.updateUser({ password });
     if (error) throw error;
