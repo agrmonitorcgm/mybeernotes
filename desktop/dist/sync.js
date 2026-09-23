@@ -122,25 +122,38 @@ class BeerDiaryCloud {
     this.members.clear();
   }
 
+  async dataRequest(request, timeoutMs = 30000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const pending = typeof request.abortSignal === 'function' ? request.abortSignal(controller.signal) : request;
+      const result = await pending;
+      if (result.error) throw result.error;
+      return result.data;
+    } catch (error) {
+      if (error?.name === 'AbortError') throw Error('Синхронизация не получила ответ от Supabase за 30 секунд. Записи сохранены на устройстве.');
+      throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   async loadMembership() {
     if (!this.session?.user) return null;
-    const { data, error } = await this.client
+    const data = await this.dataRequest(this.client
       .from('household_members')
       .select('household_id, display_name, role, households(id, name, invite_code)')
       .eq('user_id', this.session.user.id)
-      .maybeSingle();
-    if (error) throw error;
+      .maybeSingle());
     this.membership = data;
-    if (data) await this.loadMembers();
     return data;
   }
 
   async loadMembers() {
-    const { data, error } = await this.client
+    const data = await this.dataRequest(this.client
       .from('household_members')
       .select('user_id, display_name')
-      .eq('household_id', this.membership.household_id);
-    if (error) throw error;
+      .eq('household_id', this.membership.household_id));
     this.members = new Map((data || []).map(item => [item.user_id, item.display_name]));
     return this.members;
   }
@@ -158,12 +171,11 @@ class BeerDiaryCloud {
   }
 
   async listEntries() {
-    const { data, error } = await this.client
+    const data = await this.dataRequest(this.client
       .from('beer_entries')
       .select('*')
       .eq('household_id', this.membership.household_id)
-      .order('client_updated_at', { ascending: false });
-    if (error) throw error;
+      .order('client_updated_at', { ascending: false }));
     return data || [];
   }
 

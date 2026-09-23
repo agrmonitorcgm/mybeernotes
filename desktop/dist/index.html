@@ -70,7 +70,7 @@ dialog{background:#fff8dd;border:2px solid #eadca4;border-bottom-width:6px;borde
 <div class="full"><label for="photo">Фото этикетки</label><input type="file" id="photo" accept="image/*"><p class="hint">Фото из галереи, до 20 МБ.</p><div class="label-tools"><button type="button" id="label-search">Подобрать по названию</button><span class="hint">Ищем по названию и пивоварне</span></div><div id="label-results" class="label-results" hidden><p id="label-status" class="hint" role="status"></p><div id="label-options" class="label-options"></div></div><img id="photo-preview" class="photo-preview" alt="Выбранная этикетка" hidden><p id="photo-source" class="photo-source" hidden>Фото: <a id="photo-source-link" href="https://world.openfoodfacts.org/" target="_blank" rel="noopener noreferrer">Open Food Facts</a></p><button type="button" id="remove-photo" class="quiet" hidden>Убрать фото</button></div>
 </div><p id="form-error" class="form-error" role="alert" hidden></p><div class="actions"><button type="button" id="delete" class="danger" hidden>Удалить</button><button type="button" id="cancel">Отмена</button><button type="submit" class="primary" id="save">Сохранить запись</button></div></form>
 </dialog>
-<script src="./config.js"></script><script src="./sync.js?v=7"></script><script>
+<script src="./config.js"></script><script src="./sync.js?v=8"></script><script>
 'use strict';
 const PRIMARY_TAGS=['горький','сладкий','кислый','хмельной','фруктовый'];
 const TAGS=[...PRIMARY_TAGS,'мягкий','цветочный','терпкий','крепкий','хлебный','с горчинкой','медовый','легкий','говно','ссанина','жженый','карамельный','цитрусовый','кофейный','шоколадный','дымный','пряный','сухой','водянистый','освежающий'];
@@ -195,13 +195,13 @@ async function remoteEntry(row,local){
 async function saveLocal(entry){await transaction('readwrite',store=>store.put(entry));}
 async function removeLocal(id){await transaction('readwrite',store=>store.delete(id));}
 async function syncNow(silent=false){
- if(!cloudReady||!cloud.session||!cloud.membership||syncInProgress)return;
- syncInProgress=true;$('sync-now').disabled=true;
- if(!silent){cloudMessage('Синхронизируем…');message('Синхронизируем общий дневник…');}
+ if(!cloudReady||!cloud.session||!cloud.membership)return;
+ if(syncInProgress){if(!silent)cloudMessage('Синхронизация уже идёт…');return;}
+ syncInProgress=true;$('sync-now').textContent='Синхронизация…';$('sync-now').setAttribute('aria-busy','true');
+ cloudMessage('Синхронизируем…');if(!silent)message('Синхронизируем общий дневник…');
  try{
   for(const item of pendingDeletes()){await cloud.deleteEntry(item.id,item.updatedAt);forgetDelete(item.id);}
-  await cloud.loadMembers();
-  const rows=await cloud.listEntries(),localItems=await readAll();
+  const [,rows,localItems]=await Promise.all([cloud.loadMembers(),cloud.listEntries(),readAll()]);
   const locals=new Map(localItems.map(entry=>[entry.id,entry])),remoteIds=new Set();
   for(const row of rows){
    remoteIds.add(row.id);
@@ -237,7 +237,7 @@ async function syncNow(silent=false){
   $('storage-mode').textContent='На устройстве · Ожидает синхронизации';
   cloudMessage(cloudError(error),true);
   if(!silent)message('Не удалось синхронизировать. Записи остаются на этом устройстве.',true);
- }finally{syncInProgress=false;$('sync-now').disabled=false;}
+ }finally{syncInProgress=false;$('sync-now').textContent='Синхронизировать';$('sync-now').removeAttribute('aria-busy');}
 }
 function scheduleCloudSync(){clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncNow(true),800);}
 async function refreshCloudState(){
