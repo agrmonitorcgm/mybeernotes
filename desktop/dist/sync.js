@@ -33,13 +33,13 @@ class BeerDiaryCloud {
     this.client = window.supabase.createClient(this.url, this.key, {
       auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
     });
-    const { data, error } = await this.client.auth.getSession();
-    if (error) throw error;
-    this.session = data.session;
     this.client.auth.onAuthStateChange((event, session) => {
       this.session = session;
       setTimeout(() => onAuthChange?.(event, session), 0);
     });
+    const { data, error } = await this.client.auth.getSession();
+    if (error) throw error;
+    this.session = data.session;
     return true;
   }
 
@@ -61,6 +61,19 @@ class BeerDiaryCloud {
     });
     if (error) throw error;
     this.session = data.session;
+    return data;
+  }
+
+  async resetPassword(email) {
+    const { error } = await this.client.auth.resetPasswordForEmail(email, {
+      redirectTo: `${location.origin}${location.pathname}`
+    });
+    if (error) throw error;
+  }
+
+  async updatePassword(password) {
+    const { data, error } = await this.client.auth.updateUser({ password });
+    if (error) throw error;
     return data;
   }
 
