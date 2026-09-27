@@ -319,6 +319,7 @@ class BeerDiaryCloud {
       style: entry.style,
       price: entry.price,
       place: entry.place,
+      barcode: entry.barcode || '',
       would_again: entry.wouldAgain,
       rating: entry.rating,
       tags: entry.tags,
@@ -329,10 +330,17 @@ class BeerDiaryCloud {
       deleted_at: null,
       updated_at: new Date().toISOString()
     };
-    const request = existsRemotely
+    let request = existsRemotely
       ? this.client.from('beer_entries').update(row).eq('id', entry.id)
       : this.client.from('beer_entries').insert(row);
-    const { error } = await request;
+    let { error } = await request;
+    if (error && /barcode|column|schema cache/i.test(String(error.message || error))) {
+      delete row.barcode;
+      request = existsRemotely
+        ? this.client.from('beer_entries').update(row).eq('id', entry.id)
+        : this.client.from('beer_entries').insert(row);
+      ({ error } = await request);
+    }
     if (error) throw error;
     return { ...row, photo_path: photoPath };
   }

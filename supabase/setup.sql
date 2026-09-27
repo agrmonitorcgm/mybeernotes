@@ -47,6 +47,7 @@ create table if not exists public.beer_entries (
   style text not null default '',
   price text not null default '',
   place text not null default '',
+  barcode text not null default '' check (char_length(barcode) <= 512),
   would_again boolean,
   rating numeric(3,1),
   tags text[] not null default '{}',
@@ -62,8 +63,14 @@ create table if not exists public.beer_entries (
   constraint beer_entries_comment check (char_length(comment) <= 300)
 );
 
+alter table public.beer_entries add column if not exists barcode text not null default '';
+
 create index if not exists beer_entries_household_updated_idx
   on public.beer_entries (household_id, client_updated_at desc);
+
+create index if not exists beer_entries_household_barcode_idx
+  on public.beer_entries (household_id, barcode)
+  where barcode <> '';
 
 create or replace function public.is_household_member(target_household uuid)
 returns boolean
