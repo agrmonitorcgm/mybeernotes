@@ -15,11 +15,14 @@ create table if not exists public.household_members (
   household_id uuid not null references public.households(id) on delete cascade,
   user_id uuid not null references auth.users(id) on delete cascade,
   display_name text not null check (char_length(display_name) between 1 and 60),
+  avatar_path text,
   role text not null default 'member' check (role in ('owner', 'member')),
   joined_at timestamptz not null default now(),
   primary key (household_id, user_id),
   unique (user_id)
 );
+
+alter table public.household_members add column if not exists avatar_path text;
 
 create table if not exists public.profiles (
   user_id uuid primary key references auth.users(id) on delete cascade,
@@ -72,6 +75,21 @@ as $$
   select exists (
     select 1 from public.household_members
     where household_id::text = target_household::text and user_id::text = auth.uid()::text
+  );
+$$;
+
+create or replace function public.is_household_peer(target_user text)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.household_members me
+    join public.household_members peer on peer.household_id::text = me.household_id::text
+    where me.user_id::text = auth.uid()::text and peer.user_id::text = target_user
   );
 $$;
 
@@ -167,13 +185,15 @@ with check (public.is_household_member(household_id));
 
 revoke all on public.households, public.household_members, public.beer_entries, public.profiles from anon, authenticated;
 grant select on public.households, public.household_members to authenticated;
-grant update(display_name) on public.household_members to authenticated;
+grant update(display_name, avatar_path) on public.household_members to authenticated;
 grant select, insert, update on public.beer_entries to authenticated;
 grant select, insert, update on public.profiles to authenticated;
 revoke all on function public.is_household_member(uuid) from public;
+revoke all on function public.is_household_peer(text) from public;
 revoke all on function public.create_shared_diary(text) from public;
 revoke all on function public.join_shared_diary(text, text) from public;
 grant execute on function public.is_household_member(uuid) to authenticated;
+grant execute on function public.is_household_peer(text) to authenticated;
 grant execute on function public.create_shared_diary(text) to authenticated;
 grant execute on function public.join_shared_diary(text, text) to authenticated;
 
@@ -192,8 +212,12 @@ on conflict (id) do update set
   allowed_mime_types = excluded.allowed_mime_types;
 
 drop policy if exists profile_avatars_read_own on storage.objects;
-create policy profile_avatars_read_own on storage.objects for select to authenticated
-using (bucket_id = 'profile-avatars' and owner_id::text = auth.uid()::text);
+drop policy if exists profile_avatars_read_household on storage.objects;
+create policy profile_avatars_read_household on storage.objects for select to authenticated
+using (
+  bucket_id = 'profile-avatars'
+  and (owner_id::text = auth.uid()::text or public.is_household_peer((storage.foldername(name))[1]))
+);
 
 drop policy if exists profile_avatars_add_own on storage.objects;
 create policy profile_avatars_add_own on storage.objects for insert to authenticated

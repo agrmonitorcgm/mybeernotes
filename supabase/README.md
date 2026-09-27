@@ -11,6 +11,9 @@
 For an existing project created before profiles were added, run
 `profile_migration.sql` once in **SQL Editor** instead of repeating the full setup.
 
+For an existing project created before shared author avatars were added, run
+`avatar_sharing_migration.sql` once in **SQL Editor**.
+
 Never put the `service_role` key into the repository or browser code.
 
 After the first user signs in, they create a shared diary and send its eight-character invite code to the second user. Existing local records are uploaded during the first synchronization.

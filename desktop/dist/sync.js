@@ -8,6 +8,8 @@ class BeerDiaryCloud {
     this.session = null;
     this.membership = null;
     this.members = new Map();
+    this.memberAvatarPaths = new Map();
+    this.memberAvatars = new Map();
     this.profile = null;
     this.channel = null;
   }
@@ -122,6 +124,8 @@ class BeerDiaryCloud {
     this.membership = null;
     this.profile = null;
     this.members.clear();
+    this.memberAvatarPaths.clear();
+    this.memberAvatars.clear();
   }
 
   async dataRequest(request, timeoutMs = 30000) {
@@ -152,12 +156,36 @@ class BeerDiaryCloud {
   }
 
   async loadMembers() {
-    const data = await this.dataRequest(this.client
-      .from('household_members')
-      .select('user_id, display_name')
-      .eq('household_id', this.membership.household_id));
+    let data;
+    try {
+      data = await this.dataRequest(this.client
+        .from('household_members')
+        .select('user_id, display_name, avatar_path')
+        .eq('household_id', this.membership.household_id));
+    } catch (error) {
+      if (!/avatar_path|column|schema cache/i.test(String(error?.message || error))) throw error;
+      data = await this.dataRequest(this.client
+        .from('household_members')
+        .select('user_id, display_name')
+        .eq('household_id', this.membership.household_id));
+    }
     this.members = new Map((data || []).map(item => [item.user_id, item.display_name]));
+    this.memberAvatarPaths = new Map((data || []).filter(item => item.avatar_path).map(item => [item.user_id, item.avatar_path]));
     return this.members;
+  }
+
+  async loadMemberAvatars() {
+    const loaded = new Map();
+    await Promise.all([...this.memberAvatarPaths].map(async ([userId, path]) => {
+      try {
+        const avatar = await this.downloadAvatar(path);
+        if (avatar) loaded.set(userId, avatar);
+      } catch {
+        // Старые настройки Supabase могут не разрешать чтение аватара партнёра.
+      }
+    }));
+    this.memberAvatars = loaded;
+    return loaded;
   }
 
   async loadProfile() {
@@ -210,12 +238,19 @@ class BeerDiaryCloud {
     const { data, error } = await this.client.from('profiles').upsert(row).select().single();
     if (error) throw error;
     if (this.membership) {
-      const { error: memberError } = await this.client.from('household_members')
-        .update({ display_name: profile.displayName })
+      let { error: memberError } = await this.client.from('household_members')
+        .update({ display_name: profile.displayName, avatar_path: avatarPath })
         .eq('user_id', this.session.user.id);
+      if (memberError && /avatar_path|column|schema cache/i.test(String(memberError.message || memberError))) {
+        ({ error: memberError } = await this.client.from('household_members')
+          .update({ display_name: profile.displayName })
+          .eq('user_id', this.session.user.id));
+      }
       if (memberError) throw memberError;
       this.membership.display_name = profile.displayName;
       this.members.set(this.session.user.id, profile.displayName);
+      if (avatarPath) this.memberAvatarPaths.set(this.session.user.id, avatarPath);
+      if (avatarData) this.memberAvatars.set(this.session.user.id, avatarData);
     }
     this.profile = data;
     return data;
