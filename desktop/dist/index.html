@@ -22,6 +22,9 @@
 .label-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}.label-tools button{padding:9px 14px;border-radius:10px}.label-results{margin-top:12px}.label-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:9px}.label-option{display:flex;flex-direction:column;align-items:stretch;gap:7px;border-radius:12px;padding:8px;text-align:left;font-size:12px;font-weight:500;min-width:0}.label-option img{width:100%;height:130px;object-fit:contain;background:#fff;border-radius:8px}.label-option strong,.label-option span{overflow:hidden;text-overflow:ellipsis}.label-option strong{white-space:nowrap}.label-option span{color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}.photo-source{font-size:12px;margin:7px 0 0}.photo-source a{color:#725400}@media(max-width:640px){.label-options{grid-template-columns:repeat(2,minmax(0,1fr))}.label-option img{height:120px}}
 .author{grid-column:1/-1;color:#7a6b37;font-size:12px;margin-top:8px}.cloud-body{padding:24px 28px 28px}.cloud-fields{display:grid;gap:14px}.cloud-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.cloud-actions button{flex:1}.forgot-password{display:block;margin:10px auto 0;border:0;padding:7px 12px;color:#725400;text-decoration:underline;text-underline-offset:3px}.cloud-card{padding:15px;border:1px solid var(--line);border-radius:12px;background:#fffdf7;margin-top:15px}.invite-code{font-size:24px;letter-spacing:2px;font-weight:750;color:#6f5500}.cloud-message{font-size:13px;margin:12px 0 0;color:var(--muted)}.cloud-message.error{color:#a12a2a}#account-dialog{background:#fff;border:1px solid var(--line);border-radius:20px;width:min(480px,calc(100% - 24px))}#account-dialog .modal-head{border-bottom:1px solid var(--line)}@media(max-width:640px){.cloud-body{padding:20px 18px 24px}}
 
+.account-button{display:inline-flex;align-items:center;gap:8px;padding:10px 15px}.account-button svg{width:19px;height:19px;flex:none}.fab-add{position:fixed;z-index:8;right:max(18px,env(safe-area-inset-right));bottom:max(18px,env(safe-area-inset-bottom));display:inline-flex;align-items:center;gap:9px;min-height:54px;padding:13px 21px;border:0;border-radius:28px;box-shadow:0 8px 26px #5c47052e;font-size:16px}.fab-add .plus{font-size:25px;font-weight:400;line-height:1}.profile-card{padding:16px;border:1px solid var(--line);border-radius:16px;background:#fffdf7}.profile-hero{display:flex;align-items:center;gap:15px;margin-bottom:18px}.avatar{width:76px;height:76px;display:grid;place-items:center;flex:none;border-radius:50%;background:#fff3bd;border:3px solid #fff;box-shadow:0 0 0 1px #e1d295;object-fit:cover}.avatar-placeholder svg{width:38px;height:38px;color:#866c16}.profile-identity{min-width:0}.profile-identity strong,.profile-email{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.profile-email{font-size:13px;color:var(--muted);margin-top:2px}.avatar-pick{margin-top:8px;padding:7px 11px;border-radius:10px;font-size:13px}.profile-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px}.profile-fields .wide{grid-column:1/-1}.profile-save{width:100%;margin-top:17px}.profile-message{font-size:13px;margin:10px 0 0;color:var(--muted)}.profile-message.error{color:#a12a2a}.profile-section-title{font-size:15px;margin:22px 0 8px}.sync-card{margin-top:10px}.private-note{font-size:12px;color:var(--muted);margin:10px 0 0}.profile-divider{height:1px;background:var(--line);margin:21px 0}.connected-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}
+@media(max-width:640px){main{padding-bottom:104px}.account-button{font-size:13px!important;padding:9px 12px!important;gap:6px}.account-button::before{content:none!important}.account-button svg{width:18px;height:18px}.fab-add{right:max(14px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));min-height:56px;padding:13px 18px}.profile-fields{grid-template-columns:1fr}.profile-fields .wide{grid-column:auto}.connected-actions{grid-template-columns:1fr}.profile-card{padding:14px}}
+
 /* Карточка добавления: светлый пивной бокал */
 dialog{background:#fff8dd;border:2px solid #eadca4;border-bottom-width:6px;border-radius:22px 22px 46px 46px;box-shadow:0 24px 100px #604a1730,inset 12px 0 28px #fff9,inset -12px 0 28px #d4b74610;overflow:auto}
 .modal-head{border-bottom:0;background:#fff}
@@ -35,7 +38,7 @@ dialog{background:#fff8dd;border:2px solid #eadca4;border-bottom-width:6px;borde
 </style>
 </head>
 <body>
-<header><div class="top"><div class="brand"><div class="mark" aria-hidden="true">ПД</div><div><div class="eyebrow">ЛИЧНАЯ КОЛЛЕКЦИЯ</div><h1>Пивной дневник</h1><div class="sub">Впечатления, которые стоит сохранить</div></div></div><div class="top-actions"><button class="account-button" id="account" hidden>Войти</button><button class="primary" id="add" disabled>+ Добавить пиво</button></div></div></header>
+<header><div class="top"><div class="brand"><div class="mark" aria-hidden="true">ПД</div><div><div class="eyebrow">ЛИЧНАЯ КОЛЛЕКЦИЯ</div><h1>Пивной дневник</h1><div class="sub">Впечатления, которые стоит сохранить</div></div></div><div class="top-actions"><button class="account-button" id="account" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg><span>Профиль</span></button></div></div></header>
 <main>
 <div class="section-heading"><h2>Мой дневник</h2><p>Пиво, которое ты пробовал. Твои оценки и впечатления.</p></div>
 <div id="status" class="status" role="status">Открываем дневник…</div>
@@ -43,13 +46,20 @@ dialog{background:#fff8dd;border:2px solid #eadca4;border-bottom-width:6px;borde
 <section class="grid" id="list" aria-label="Записи дневника"></section>
 <div class="footer"><span id="storage-mode">Только на этом устройстве · Без синхронизации</span><button id="export" disabled>Скачать копию</button><button id="import" disabled>Восстановить копию</button><input type="file" id="backup-file" accept="application/json,.json" hidden><details><summary>О сохранении</summary><p>Записи и фотографии сохраняются в браузере. После входа они также синхронизируются с общим дневником.</p></details></div>
 </main>
+<button class="primary fab-add" id="add" disabled><span class="plus" aria-hidden="true">+</span><span>Добавить пиво</span></button>
 <dialog id="account-dialog" aria-labelledby="account-title">
-<div class="modal-head"><h2 id="account-title">Синхронизация</h2><button class="quiet close" id="account-close" aria-label="Закрыть">×</button></div>
+<div class="modal-head"><h2 id="account-title">Профиль</h2><button class="quiet close" id="account-close" aria-label="Закрыть">×</button></div>
 <div class="cloud-body">
 <section id="auth-view"><div class="cloud-fields"><div><label for="auth-email">Email</label><input id="auth-email" type="email" autocomplete="email" placeholder="name@example.com"></div><div><label for="auth-password">Пароль</label><input id="auth-password" type="password" minlength="6" autocomplete="current-password" placeholder="Минимум 6 символов"></div></div><div class="cloud-actions"><button id="sign-in" class="primary">Войти</button><button id="sign-up">Создать аккаунт</button></div><button id="forgot-password" class="quiet forgot-password">Забыли пароль?</button></section>
 <section id="reset-view" hidden><p>Придумайте новый пароль для аккаунта.</p><div class="cloud-fields"><div><label for="new-password">Новый пароль</label><input id="new-password" type="password" minlength="6" autocomplete="new-password" placeholder="Минимум 6 символов"></div><div><label for="new-password-repeat">Повторите пароль</label><input id="new-password-repeat" type="password" minlength="6" autocomplete="new-password"></div></div><div class="cloud-actions"><button id="save-new-password" class="primary">Сохранить новый пароль</button></div></section>
 <section id="household-view" hidden><p>Создайте общий дневник или введите код приглашения.</p><div class="cloud-fields"><div><label for="invite-input">Код приглашения</label><input id="invite-input" maxlength="8" autocomplete="off" placeholder="Например, A1B2C3D4"></div></div><div class="cloud-actions"><button id="create-diary" class="primary">Создать дневник</button><button id="join-diary">Присоединиться</button></div><button id="logout-before-join" class="quiet danger">Выйти из аккаунта</button></section>
-<section id="connected-view" hidden><p id="connected-user"></p><div class="cloud-card"><div class="hint">Код приглашения для второго человека</div><div id="invite-code" class="invite-code"></div><button id="copy-invite">Скопировать код</button></div><div class="cloud-actions"><button id="sync-now" class="primary">Синхронизировать</button><button id="sign-out">Выйти</button></div></section>
+<section id="connected-view" hidden>
+<div class="profile-card">
+<div class="profile-hero"><div id="avatar-placeholder" class="avatar avatar-placeholder" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="8" r="4"></circle><path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path></svg></div><img id="profile-avatar" class="avatar" alt="Аватар профиля" hidden><div class="profile-identity"><strong id="profile-heading">Профиль</strong><span id="profile-email" class="profile-email"></span><button id="profile-avatar-pick" class="avatar-pick" type="button">Добавить аватар</button><input id="profile-avatar-input" type="file" accept="image/*" hidden></div></div>
+<div class="profile-fields"><div class="wide"><label for="profile-name">Отображаемое имя <span class="required">*</span></label><input id="profile-name" maxlength="60" autocomplete="name"></div><div><label for="profile-gender">Пол</label><select id="profile-gender"><option value="">Не указан</option><option value="male">Мужской</option><option value="female">Женский</option><option value="other">Другой</option></select></div><div><label for="profile-age">Возраст</label><input id="profile-age" type="number" min="1" max="120" inputmode="numeric" placeholder="Например, 41"></div><div class="wide"><label for="profile-country">Страна рождения</label><input id="profile-country" list="countries" maxlength="80" autocomplete="country-name" placeholder="Например, 🇷🇺 Россия"></div><div class="wide"><label for="profile-party">Политическая партия</label><input id="profile-party" maxlength="120" autocomplete="off" placeholder="Необязательно"></div></div>
+<p class="private-note">Данные профиля видны только владельцу аккаунта.</p><button id="save-profile" class="primary profile-save" type="button">Сохранить профиль</button><p id="profile-message" class="profile-message" role="status"></p>
+</div>
+<div class="profile-divider"></div><strong class="profile-section-title">Общий дневник</strong><div class="cloud-card sync-card"><div class="hint">Код приглашения для второго человека</div><div id="invite-code" class="invite-code"></div><button id="copy-invite">Скопировать код</button></div><div class="connected-actions"><button id="sync-now" class="primary">Синхронизировать</button><button id="sign-out">Выйти</button></div></section>
 <p id="cloud-message" class="cloud-message" role="status"></p>
 </div></dialog>
 <dialog id="editor" aria-labelledby="editor-title">
@@ -70,7 +80,7 @@ dialog{background:#fff8dd;border:2px solid #eadca4;border-bottom-width:6px;borde
 <div class="full"><label for="photo">Фото этикетки</label><input type="file" id="photo" accept="image/*"><p class="hint">Фото из галереи, до 20 МБ.</p><div class="label-tools"><button type="button" id="label-search">Подобрать по названию</button><span class="hint">Ищем по названию и пивоварне</span></div><div id="label-results" class="label-results" hidden><p id="label-status" class="hint" role="status"></p><div id="label-options" class="label-options"></div></div><img id="photo-preview" class="photo-preview" alt="Выбранная этикетка" hidden><p id="photo-source" class="photo-source" hidden>Фото: <a id="photo-source-link" href="https://world.openfoodfacts.org/" target="_blank" rel="noopener noreferrer">Open Food Facts</a></p><button type="button" id="remove-photo" class="quiet" hidden>Убрать фото</button></div>
 </div><p id="form-error" class="form-error" role="alert" hidden></p><div class="actions"><button type="button" id="delete" class="danger" hidden>Удалить</button><button type="button" id="cancel">Отмена</button><button type="submit" class="primary" id="save">Сохранить запись</button></div></form>
 </dialog>
-<script src="./config.js"></script><script src="./sync.js?v=8"></script><script>
+<script src="./config.js"></script><script src="./sync.js?v=9"></script><script>
 'use strict';
 const PRIMARY_TAGS=['горький','сладкий','кислый','хмельной','фруктовый'];
 const TAGS=[...PRIMARY_TAGS,'мягкий','цветочный','терпкий','крепкий','хлебный','с горчинкой','медовый','легкий','говно','ссанина','жженый','карамельный','цитрусовый','кофейный','шоколадный','дымный','пряный','сухой','водянистый','освежающий'];
@@ -106,6 +116,7 @@ function validateEntry(e){
  return {id:e.id,name:e.name.trim(),date:e.date,country:e.country.trim(),abv:e.abv,brewery:brewery.trim(),style:style.trim(),price:price.trim(),place:place.trim(),wouldAgain,rating:e.rating,tags:[...new Set(e.tags)],comment:e.comment,photo:e.photo,photoSource,createdBy,authorName,remotePhotoPath,updatedAt:e.updatedAt};
 }
 let db,entries=[],editing=null,photoData=null,photoSource=null,selectedTags=new Set(),wouldAgain=null,dirty=false,busy=false,photoGeneration=0,labelSearchGeneration=0,labelSearchTimer=null,lastLabelQuery='';
+let profileAvatarData=null,profileAvatarDirty=false,profileLoadGeneration=0;
 const cloud=new window.BeerDiaryCloud(window.BEER_DIARY_CONFIG||{});
 let cloudReady=false,syncInProgress=false,syncTimer=null,passwordRecovery=false;
 function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);$('status').hidden=!text;}
@@ -144,7 +155,7 @@ function updateWouldAgain(value){wouldAgain=value;$('again-yes').setAttribute('a
 function openEditor(entry=null){editing=entry?entry.id:null;photoGeneration++;photoData=entry?.photo||null;photoSource=entry?.photoSource||null;selectedTags=new Set(entry?.tags||[]);$('form').reset();clearLabelResults();$('name').value=entry?.name||'';$('date').value=entry?.date||today();$('country').value=countryDisplay(entry?.country||'');$('abv').value=entry?.abv==null?'':format(entry.abv);$('brewery').value=entry?.brewery||'';$('style').value=entry?.style||'';$('price').value=entry?.price||'';$('place').value=entry?.place||'';updateWouldAgain(entry?.wouldAgain??null);$('comment').value=entry?.comment||'';$('counter').textContent=`${$('comment').value.length} / 300`;updateRating(entry?.rating??null);document.querySelectorAll('#tags-primary .chip, #tags-more .chip').forEach(b=>b.setAttribute('aria-pressed',String(selectedTags.has(b.textContent))));const hasExtra=[...selectedTags].some(t=>!PRIMARY_TAGS.includes(t));$('tags-more').hidden=!hasExtra;$('more-tags').setAttribute('aria-expanded',String(hasExtra));$('more-tags').firstChild.textContent=hasExtra?'Скрыть':'Ещё '+(TAGS.length-PRIMARY_TAGS.length);showPhoto();formError('');$('delete').hidden=!entry;$('editor-title').textContent=entry?'Запись о пиве':'Новое пиво';dirty=false;$('editor').showModal();}
 function closeEditor(){if(busy)return;if(dirty&&!confirm('Закрыть без сохранения изменений?'))return;photoGeneration++;$('editor').close();}
 function setBusy(value){busy=value;['save','delete','photo','remove-photo','close','cancel','again-yes','again-no','more-tags','label-search'].forEach(id=>$(id).disabled=value);}
-async function compressPhoto(file){if(!file.type.startsWith('image/'))throw Error('Выбери файл изображения.');if(file.size>20*1024*1024)throw Error('Фото слишком большое. Выбери файл до 20 МБ.');const url=URL.createObjectURL(file);try{const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=()=>no(Error('Не удалось открыть фото. Попробуй JPEG или PNG.'));img.src=url;});const scale=Math.min(1,1200/Math.max(img.naturalWidth,img.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',.8);}finally{URL.revokeObjectURL(url);}}
+async function compressPhoto(file,maxSide=1200,quality=.8){if(!file.type.startsWith('image/'))throw Error('Выбери файл изображения.');if(file.size>20*1024*1024)throw Error('Фото слишком большое. Выбери файл до 20 МБ.');const url=URL.createObjectURL(file);try{const img=new Image();await new Promise((ok,no)=>{img.onload=ok;img.onerror=()=>no(Error('Не удалось открыть фото. Попробуй JPEG или PNG.'));img.src=url;});const scale=Math.min(1,maxSide/Math.max(img.naturalWidth,img.naturalHeight));const canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(img.naturalWidth*scale));canvas.height=Math.max(1,Math.round(img.naturalHeight*scale));const ctx=canvas.getContext('2d');ctx.fillStyle='#ffffff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.drawImage(img,0,0,canvas.width,canvas.height);return canvas.toDataURL('image/jpeg',quality);}finally{URL.revokeObjectURL(url);}}
 
 const PENDING_DELETES_KEY='beer-diary-pending-deletes-v1';
 function pendingDeletes(){
@@ -153,6 +164,7 @@ function pendingDeletes(){
 function rememberDelete(id,updatedAt){const items=pendingDeletes().filter(item=>item.id!==id);items.push({id,updatedAt});localStorage.setItem(PENDING_DELETES_KEY,JSON.stringify(items));}
 function forgetDelete(id){localStorage.setItem(PENDING_DELETES_KEY,JSON.stringify(pendingDeletes().filter(item=>item.id!==id)));}
 function cloudMessage(text,error=false){$('cloud-message').textContent=text;$('cloud-message').classList.toggle('error',error);}
+function profileMessage(text,error=false){$('profile-message').textContent=text;$('profile-message').classList.toggle('error',error);}
 function cloudError(error){
  const value=String(error?.message||error||'');
  if(/invalid login credentials/i.test(value))return'Неверный email или пароль.';
@@ -161,6 +173,7 @@ function cloudError(error){
  if(/invite code not found/i.test(value))return'Код приглашения не найден.';
  if(/rate limit|security purposes/i.test(value))return'Письмо уже отправлялось недавно. Подождите немного и попробуйте снова.';
  if(/password should be at least/i.test(value))return'Пароль должен содержать не меньше 6 символов.';
+ if(/profiles|profile-avatars/i.test(value)&&/not found|does not exist|schema cache/i.test(value))return'Сначала обновите структуру базы Supabase для профилей.';
  if(/supabase отвечает слишком долго/i.test(value))return value;
  if(/link.*expired|token.*expired|otp_expired|ссылка восстановления устарела/i.test(value))return'Ссылка восстановления устарела. Запросите новое письмо.';
  return value||'Не удалось выполнить операцию.';
@@ -179,6 +192,31 @@ async function saveCloudPassword(password){
  return data;
 }
 function householdInfo(){const value=cloud.membership?.households;return Array.isArray(value)?value[0]:value;}
+function showProfileAvatar(){const hasAvatar=safePhoto(profileAvatarData);$('profile-avatar').hidden=!hasAvatar;$('avatar-placeholder').hidden=hasAvatar;if(hasAvatar)$('profile-avatar').src=profileAvatarData;else $('profile-avatar').removeAttribute('src');$('profile-avatar-pick').textContent=hasAvatar?'Сменить аватар':'Добавить аватар';}
+async function loadProfileUi(){
+ const generation=++profileLoadGeneration;
+ profileMessage('Загружаем профиль…');$('profile-email').textContent=cloud.session?.user?.email||'';
+ try{
+  const profile=await cloud.loadProfile();if(generation!==profileLoadGeneration)return;
+  const name=profile?.display_name||cloud.membership?.display_name||loginName(cloud.session?.user?.email);
+  $('profile-name').value=name;$('profile-heading').textContent=name;$('profile-gender').value=profile?.gender||'';$('profile-age').value=profile?.age??'';$('profile-country').value=countryDisplay(profile?.birth_country||'');$('profile-party').value=profile?.political_party||'';
+  profileAvatarData=null;profileAvatarDirty=false;showProfileAvatar();
+  if(profile?.avatar_path){try{const avatar=await cloud.downloadAvatar(profile.avatar_path);if(generation===profileLoadGeneration){profileAvatarData=avatar;showProfileAvatar();}}catch{/* Профиль остаётся доступен без изображения. */}}
+  if(generation===profileLoadGeneration)profileMessage('');
+ }catch(error){if(generation===profileLoadGeneration)profileMessage(cloudError(error),true);}
+}
+async function saveProfileUi(){
+ const displayName=$('profile-name').value.trim(),rawAge=$('profile-age').value.trim();
+ if(!displayName){profileMessage('Введите отображаемое имя.',true);$('profile-name').focus();return;}
+ const age=rawAge===''?null:Number(rawAge);if(age!==null&&(!Number.isInteger(age)||age<1||age>120)){profileMessage('Возраст должен быть целым числом от 1 до 120.',true);$('profile-age').focus();return;}
+ const profile={displayName,gender:$('profile-gender').value,age,birthCountry:plainCountry($('profile-country').value),politicalParty:$('profile-party').value.trim()};
+ $('save-profile').disabled=true;$('profile-avatar-pick').disabled=true;profileMessage('Сохраняем профиль…');
+ try{
+  await cloud.saveProfile(profile,profileAvatarDirty?profileAvatarData:null);profileAvatarDirty=false;$('profile-heading').textContent=displayName;
+  const userId=cloud.session.user.id,renamed=entries.filter(entry=>entry.createdBy===userId&&entry.authorName!==displayName);for(const entry of renamed){entry.authorName=displayName;await saveLocal(entry);}render();
+  profileMessage('Профиль сохранён.');
+ }catch(error){profileMessage(cloudError(error),true);}finally{$('save-profile').disabled=false;$('profile-avatar-pick').disabled=false;}
+}
 async function remoteEntry(row,local){
  let photo=local?.remotePhotoPath===row.photo_path&&local?.photo?local.photo:null;
  if(!photo&&row.photo_path){try{photo=await cloud.downloadPhoto(row.photo_path);}catch{photo=null;}}
@@ -231,7 +269,7 @@ async function syncNow(silent=false){
   entries=(await readAll()).map(validateEntry);render();
   const now=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
   $('storage-mode').textContent=`Общий дневник · Синхронизировано в ${now}`;
-  $('account').textContent='Общий дневник';cloudMessage(`Готово · ${now}`);message('');
+  cloudMessage(`Готово · ${now}`);message('');
   cloud.subscribe(()=>scheduleCloudSync());
  }catch(error){
   $('storage-mode').textContent='На устройстве · Ожидает синхронизации';
@@ -241,9 +279,9 @@ async function syncNow(silent=false){
 }
 function scheduleCloudSync(){clearTimeout(syncTimer);syncTimer=setTimeout(()=>syncNow(true),800);}
 async function refreshCloudState(){
- if(passwordRecovery){cloudViews('reset-view');$('account').textContent='Новый пароль';return;}
+ if(passwordRecovery){cloudViews('reset-view');return;}
  if(!cloud.session?.user){
-  cloud.membership=null;cloudViews('auth-view');$('account').textContent='Войти';
+  cloud.membership=null;cloud.profile=null;cloudViews('auth-view');
   $('storage-mode').textContent='На этом устройстве · Войдите для синхронизации';return;
  }
  cloudMessage('Проверяем общий дневник…');
@@ -251,17 +289,15 @@ async function refreshCloudState(){
   await cloud.loadMembership();
   if(!cloud.membership){
    cloudViews('household-view');
-   $('account').textContent='Настроить синхронизацию';
    $('storage-mode').textContent='На этом устройстве · Создайте общий дневник';cloudMessage('');return;
   }
   cloudViews('connected-view');
   const household=householdInfo();
-  $('connected-user').textContent=`${cloud.membership.display_name} · ${cloud.session.user.email}`;
-  $('invite-code').textContent=household?.invite_code||'';$('account').textContent='Общий дневник';cloudMessage('');
+  $('invite-code').textContent=household?.invite_code||'';cloudMessage('');loadProfileUi();
   await syncNow(true);
  }catch(error){cloudMessage(cloudError(error),true);}
 }
-function setCloudBusy(value){['sign-in','sign-up','forgot-password','save-new-password','create-diary','join-diary','sign-out','logout-before-join'].forEach(id=>$(id).disabled=value);}
+function setCloudBusy(value){['sign-in','sign-up','forgot-password','save-new-password','create-diary','join-diary','sign-out','logout-before-join','save-profile','profile-avatar-pick'].forEach(id=>$(id).disabled=value);}
 function setupCloudUi(){
  $('account').onclick=()=>{$('account-dialog').showModal();refreshCloudState();};
  $('account-close').onclick=()=>$('account-dialog').close();
@@ -308,12 +344,16 @@ function setupCloudUi(){
  };
  $('sync-now').onclick=()=>syncNow();
  $('copy-invite').onclick=async()=>{try{await navigator.clipboard.writeText($('invite-code').textContent);cloudMessage('Код скопирован.');}catch{cloudMessage('Не удалось скопировать. Выделите код вручную.',true);}};
+ $('profile-avatar-pick').onclick=()=>$('profile-avatar-input').click();
+ $('profile-avatar-input').onchange=async()=>{const file=$('profile-avatar-input').files[0];$('profile-avatar-input').value='';if(!file)return;$('profile-avatar-pick').disabled=true;profileMessage('Готовим аватар…');try{profileAvatarData=await compressPhoto(file,512,.82);profileAvatarDirty=true;showProfileAvatar();profileMessage('Нажмите «Сохранить профиль».');}catch(error){profileMessage(error.message,true);}finally{$('profile-avatar-pick').disabled=false;}};
+ $('profile-country').addEventListener('change',()=>{$('profile-country').value=countryDisplay($('profile-country').value);});
+ $('save-profile').onclick=saveProfileUi;
 }
 async function initCloud(){
  if(!cloud.configured)return;
  $('account').hidden=false;setupCloudUi();$('storage-mode').textContent='На этом устройстве · Подключаем синхронизацию…';
  try{
-  cloudReady=await cloud.init((event)=>{if(event==='PASSWORD_RECOVERY'){passwordRecovery=true;cloudViews('reset-view');$('account').textContent='Новый пароль';if(!$('account-dialog').open)$('account-dialog').showModal();cloudMessage('Введите новый пароль.');return;}refreshCloudState();});await refreshCloudState();
+  cloudReady=await cloud.init((event)=>{if(event==='PASSWORD_RECOVERY'){passwordRecovery=true;cloudViews('reset-view');if(!$('account-dialog').open)$('account-dialog').showModal();cloudMessage('Введите новый пароль.');return;}refreshCloudState();});await refreshCloudState();
   window.addEventListener('online',scheduleCloudSync);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)scheduleCloudSync();});
  }catch(error){$('storage-mode').textContent='На этом устройстве · Синхронизация недоступна';cloudMessage(cloudError(error),true);}

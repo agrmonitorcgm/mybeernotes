@@ -8,6 +8,9 @@
 4. In **Project Settings → API** copy the Project URL and the Publishable key (or legacy `anon` key).
 5. Put those two public values into `desktop/dist/config.js`.
 
+For an existing project created before profiles were added, run
+`profile_migration.sql` once in **SQL Editor** instead of repeating the full setup.
+
 Never put the `service_role` key into the repository or browser code.
 
 After the first user signs in, they create a shared diary and send its eight-character invite code to the second user. Existing local records are uploaded during the first synchronization.

@@ -8,6 +8,7 @@ class BeerDiaryCloud {
     this.session = null;
     this.membership = null;
     this.members = new Map();
+    this.profile = null;
     this.channel = null;
   }
 
@@ -119,6 +120,7 @@ class BeerDiaryCloud {
     if (error) throw error;
     this.session = null;
     this.membership = null;
+    this.profile = null;
     this.members.clear();
   }
 
@@ -156,6 +158,67 @@ class BeerDiaryCloud {
       .eq('household_id', this.membership.household_id));
     this.members = new Map((data || []).map(item => [item.user_id, item.display_name]));
     return this.members;
+  }
+
+  async loadProfile() {
+    if (!this.session?.user) return null;
+    const data = await this.dataRequest(this.client
+      .from('profiles')
+      .select('display_name, gender, age, birth_country, political_party, avatar_path')
+      .eq('user_id', this.session.user.id)
+      .maybeSingle());
+    this.profile = data;
+    return data;
+  }
+
+  async downloadAvatar(path) {
+    if (!path) return null;
+    const { data, error } = await this.client.storage.from('profile-avatars').download(path);
+    if (error) throw error;
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error || Error('Не удалось прочитать аватар.'));
+      reader.readAsDataURL(data);
+    });
+  }
+
+  async uploadAvatar(dataUrl) {
+    const blob = await (await fetch(dataUrl)).blob();
+    const path = `${this.session.user.id}/avatar.jpg`;
+    const { error } = await this.client.storage.from('profile-avatars').upload(path, blob, {
+      contentType: 'image/jpeg',
+      cacheControl: '3600',
+      upsert: true
+    });
+    if (error) throw error;
+    return path;
+  }
+
+  async saveProfile(profile, avatarData = null) {
+    const avatarPath = avatarData ? await this.uploadAvatar(avatarData) : (this.profile?.avatar_path || null);
+    const row = {
+      user_id: this.session.user.id,
+      display_name: profile.displayName,
+      gender: profile.gender,
+      age: profile.age,
+      birth_country: profile.birthCountry,
+      political_party: profile.politicalParty,
+      avatar_path: avatarPath,
+      updated_at: new Date().toISOString()
+    };
+    const { data, error } = await this.client.from('profiles').upsert(row).select().single();
+    if (error) throw error;
+    if (this.membership) {
+      const { error: memberError } = await this.client.from('household_members')
+        .update({ display_name: profile.displayName })
+        .eq('user_id', this.session.user.id);
+      if (memberError) throw memberError;
+      this.membership.display_name = profile.displayName;
+      this.members.set(this.session.user.id, profile.displayName);
+    }
+    this.profile = data;
+    return data;
   }
 
   async createDiary(displayName) {

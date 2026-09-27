@@ -21,6 +21,17 @@ create table if not exists public.household_members (
   unique (user_id)
 );
 
+create table if not exists public.profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  display_name text not null check (char_length(display_name) between 1 and 60),
+  gender text not null default '' check (gender in ('', 'male', 'female', 'other')),
+  age smallint check (age is null or (age between 1 and 120)),
+  birth_country text not null default '' check (char_length(birth_country) <= 80),
+  political_party text not null default '' check (char_length(political_party) <= 120),
+  avatar_path text,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.beer_entries (
   id text primary key check (char_length(id) between 1 and 100),
   household_id uuid not null references public.households(id) on delete cascade,
@@ -112,6 +123,7 @@ $$;
 alter table public.households enable row level security;
 alter table public.household_members enable row level security;
 alter table public.beer_entries enable row level security;
+alter table public.profiles enable row level security;
 
 drop policy if exists households_read on public.households;
 create policy households_read on public.households for select to authenticated
@@ -120,6 +132,24 @@ using (public.is_household_member(id));
 drop policy if exists members_read on public.household_members;
 create policy members_read on public.household_members for select to authenticated
 using (public.is_household_member(household_id));
+
+drop policy if exists members_update_own on public.household_members;
+create policy members_update_own on public.household_members for update to authenticated
+using (user_id::text = auth.uid()::text)
+with check (user_id::text = auth.uid()::text);
+
+drop policy if exists profiles_read_own on public.profiles;
+create policy profiles_read_own on public.profiles for select to authenticated
+using (user_id::text = auth.uid()::text);
+
+drop policy if exists profiles_add_own on public.profiles;
+create policy profiles_add_own on public.profiles for insert to authenticated
+with check (user_id::text = auth.uid()::text);
+
+drop policy if exists profiles_edit_own on public.profiles;
+create policy profiles_edit_own on public.profiles for update to authenticated
+using (user_id::text = auth.uid()::text)
+with check (user_id::text = auth.uid()::text);
 
 drop policy if exists beer_entries_read on public.beer_entries;
 create policy beer_entries_read on public.beer_entries for select to authenticated
@@ -135,9 +165,11 @@ create policy beer_entries_edit on public.beer_entries for update to authenticat
 using (public.is_household_member(household_id))
 with check (public.is_household_member(household_id));
 
-revoke all on public.households, public.household_members, public.beer_entries from anon, authenticated;
+revoke all on public.households, public.household_members, public.beer_entries, public.profiles from anon, authenticated;
 grant select on public.households, public.household_members to authenticated;
+grant update(display_name) on public.household_members to authenticated;
 grant select, insert, update on public.beer_entries to authenticated;
+grant select, insert, update on public.profiles to authenticated;
 revoke all on function public.is_household_member(uuid) from public;
 revoke all on function public.create_shared_diary(text) from public;
 revoke all on function public.join_shared_diary(text, text) from public;
@@ -151,6 +183,30 @@ on conflict (id) do update set
   public = excluded.public,
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('profile-avatars', 'profile-avatars', false, 1048576, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+drop policy if exists profile_avatars_read_own on storage.objects;
+create policy profile_avatars_read_own on storage.objects for select to authenticated
+using (bucket_id = 'profile-avatars' and owner_id::text = auth.uid()::text);
+
+drop policy if exists profile_avatars_add_own on storage.objects;
+create policy profile_avatars_add_own on storage.objects for insert to authenticated
+with check (bucket_id = 'profile-avatars' and owner_id::text = auth.uid()::text);
+
+drop policy if exists profile_avatars_edit_own on storage.objects;
+create policy profile_avatars_edit_own on storage.objects for update to authenticated
+using (bucket_id = 'profile-avatars' and owner_id::text = auth.uid()::text)
+with check (bucket_id = 'profile-avatars' and owner_id::text = auth.uid()::text);
+
+drop policy if exists profile_avatars_delete_own on storage.objects;
+create policy profile_avatars_delete_own on storage.objects for delete to authenticated
+using (bucket_id = 'profile-avatars' and owner_id::text = auth.uid()::text);
 
 drop policy if exists beer_labels_read on storage.objects;
 create policy beer_labels_read on storage.objects for select to authenticated
