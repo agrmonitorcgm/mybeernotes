@@ -97,7 +97,7 @@ dialog{background:#fff8dd;border:2px solid #eadca4;border-bottom-width:6px;borde
 <dialog id="scanner-dialog" aria-labelledby="scanner-title"><div class="modal-head"><h2 id="scanner-title">Сканирование</h2><button class="quiet close" id="scanner-head-close" aria-label="Закрыть">×</button></div><div class="scanner-body"><div id="barcode-reader" class="scanner-reader"></div><p id="scanner-status" class="scanner-status" role="status">Готовим камеру…</p><div class="scanner-actions"><button type="button" id="scanner-manual">Ввести вручную</button><button type="button" id="scanner-close">Отмена</button></div></div></dialog>
 <dialog id="detail-dialog" aria-labelledby="detail-title"><div class="modal-head"><h2 id="detail-title">Подробности</h2><button class="quiet close" id="detail-head-close" aria-label="Закрыть">×</button></div><div id="detail-content" class="detail-body"></div><div class="detail-actions"><button type="button" class="primary" id="detail-edit">Редактировать</button><button type="button" class="danger" id="detail-delete">Удалить</button><button type="button" id="detail-close">Закрыть</button></div></dialog>
 <dialog id="photo-viewer" aria-label="Фото этикетки"><button type="button" class="photo-viewer-close" id="photo-viewer-close" aria-label="Закрыть">×</button><img id="photo-viewer-image" class="photo-viewer-image" alt="Этикетка пива"></dialog>
-<script src="./config.js"></script><script src="./sync.js?v=19"></script><script>
+<script src="./config.js"></script><script src="./sync.js?v=20"></script><script>
 'use strict';
 const PRIMARY_TAGS=['горький','сладкий','кислый','хмельной','фруктовый'];
 const TAGS=[...PRIMARY_TAGS,'мягкий','цветочный','терпкий','крепкий','хлебный','с горчинкой','медовый','легкий','говно','ссанина','жженый','карамельный','цитрусовый','кофейный','шоколадный','дымный','пряный','сухой','водянистый','освежающий'];
@@ -133,7 +133,7 @@ function validateEntry(e){
  return {id:e.id,name:e.name.trim(),date:e.date,country:e.country.trim(),abv:e.abv,brewery:brewery.trim(),style:style.trim(),price:price.trim(),place:place.trim(),barcode:barcode.trim(),wouldAgain,rating:e.rating,tags:[...new Set(e.tags)],comment:e.comment,photo:e.photo,photoSource,createdBy,authorName,remotePhotoPath,updatedAt:e.updatedAt};
 }
 let db,entries=[],editing=null,viewing=null,photoData=null,photoSource=null,scannedCode='',selectedTags=new Set(),wouldAgain=null,dirty=false,busy=false,photoGeneration=0,labelSearchGeneration=0,labelSearchTimer=null,lastLabelQuery='',scanner=null,scannerBusy=false,scannerHandled=false,scannerGeneration=0;
-let profileAvatarData=null,profileAvatarDirty=false,profileLoadGeneration=0;
+let profileAvatarData=null,profileAvatarDirty=false,profileLoadGeneration=0,photoSyncGeneration=0;
 const cloud=new window.BeerDiaryCloud(window.BEER_DIARY_CONFIG||{});
 let cloudReady=false,syncInProgress=false,syncTimer=null,passwordRecovery=false;
 function message(text,error=false){$('status').textContent=text;$('status').classList.toggle('error',error);$('status').hidden=!text;}
@@ -325,14 +325,13 @@ async function saveProfileUi(){
  const previous=readProfileCache(),cached={...profile,avatarData:profileAvatarData,avatarPath:cloud.profile?.avatar_path||previous?.avatarPath||null,avatarDirty:profileAvatarDirty,pending:true};
  const cachedLocally=writeProfileCache(cached);$('profile-heading').textContent=displayName;$('save-profile').disabled=true;$('profile-avatar-pick').disabled=true;profileMessage('Сохраняем профиль…');
  try{
-  const saved=await cloud.saveProfile(profile,profileAvatarDirty?profileAvatarData:null);profileAvatarDirty=false;writeProfileCache({...cached,avatarPath:saved?.avatar_path||cached.avatarPath,avatarDirty:false,pending:false});
+  const saved=await cloud.saveProfile(profile,profileAvatarDirty?profileAvatarData:null,cached.avatarPath);profileAvatarDirty=false;writeProfileCache({...cached,avatarPath:saved?.avatar_path||cached.avatarPath,avatarDirty:false,pending:false});
   const userId=cloud.session.user.id,renamed=entries.filter(entry=>entry.createdBy===userId&&entry.authorName!==displayName);for(const entry of renamed){entry.authorName=displayName;await saveLocal(entry);}render();
   profileMessage('Профиль сохранён и отправлен на сервер.');
  }catch(error){profileMessage(cachedLocally?'Профиль сохранён на этом устройстве. Supabase пока не ответил — повторите отправку позже.':cloudError(error),!cachedLocally);}finally{$('save-profile').disabled=false;$('profile-avatar-pick').disabled=false;}
 }
 async function remoteEntry(row,local){
  let photo=local?.remotePhotoPath===row.photo_path&&local?.photo?local.photo:null;
- if(!photo&&row.photo_path){try{photo=await cloud.downloadPhoto(row.photo_path);}catch{photo=null;}}
  return validateEntry({
   id:row.id,name:row.name,date:row.tasting_date,country:row.country||'',
   abv:row.abv===null?null:Number(row.abv),brewery:row.brewery||'',style:row.style||'',
@@ -342,6 +341,14 @@ async function remoteEntry(row,local){
   authorName:cloud.members.get(row.created_by)||'',remotePhotoPath:row.photo_path||null,
   updatedAt:Number(row.client_updated_at)
  });
+}
+async function syncRemotePhotos(rows){
+ const generation=++photoSyncGeneration;
+ const queue=rows.filter(row=>!row.deleted_at&&row.photo_path).filter(row=>{const local=entries.find(entry=>entry.id===row.id);return local&&local.remotePhotoPath===row.photo_path&&!local.photo;});
+ let cursor=0,changed=false;
+ const worker=async()=>{while(generation===photoSyncGeneration){const row=queue[cursor++];if(!row)return;try{const photo=await cloud.downloadPhoto(row.photo_path);if(generation!==photoSyncGeneration||!photo)continue;const index=entries.findIndex(entry=>entry.id===row.id&&entry.remotePhotoPath===row.photo_path&&!entry.photo);if(index<0)continue;const updated=validateEntry({...entries[index],photo});entries[index]=updated;await saveLocal(updated);changed=true;render();}catch{/* Метаданные уже синхронизированы; фото попробуем получить в следующий раз. */}}};
+ await Promise.all([worker(),worker()]);
+ if(changed&&generation===photoSyncGeneration)render();
 }
 async function saveLocal(entry){await transaction('readwrite',store=>store.put(entry));}
 async function removeLocal(id){await transaction('readwrite',store=>store.delete(id));}
@@ -379,7 +386,7 @@ async function syncNow(silent=false){
    const saved=await cloud.upsertEntry(migrated,local.remotePhotoPath);migrated.remotePhotoPath=saved.photo_path;
    await saveLocal(validateEntry(migrated));
   }
-  entries=(await readAll()).map(validateEntry);render();cloud.loadMemberAvatars().then(()=>render()).catch(()=>{});
+  entries=(await readAll()).map(validateEntry);render();cloud.loadMemberAvatars().then(()=>render()).catch(()=>{});syncRemotePhotos(rows).catch(()=>{});
   const now=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
   $('storage-mode').textContent=`Общий дневник · Синхронизировано в ${now}`;
   cloudMessage(`Готово · ${now}`);message('');

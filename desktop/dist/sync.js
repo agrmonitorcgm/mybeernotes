@@ -15,6 +15,7 @@ class BeerDiaryCloud {
     this.members = new Map();
     this.memberAvatarPaths = new Map();
     this.memberAvatars = new Map();
+    this.memberAvatarLoadedPaths = new Map();
     this.profile = null;
     this.channel = null;
   }
@@ -131,9 +132,10 @@ class BeerDiaryCloud {
     this.members.clear();
     this.memberAvatarPaths.clear();
     this.memberAvatars.clear();
+    this.memberAvatarLoadedPaths.clear();
   }
 
-  async dataRequest(request, timeoutMs = 45000) {
+  async dataRequest(request, timeoutMs = 15000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -149,7 +151,7 @@ class BeerDiaryCloud {
     }
   }
 
-  async promiseRequest(request, timeoutMs = 45000) {
+  async promiseRequest(request, timeoutMs = 15000) {
     let timer;
     const timeout = new Promise((_, reject) => {
       timer = setTimeout(() => reject(Error('Сервер Supabase отвечает слишком долго. Данные сохранены на устройстве.')), timeoutMs);
@@ -194,13 +196,17 @@ class BeerDiaryCloud {
   }
 
   async loadMemberAvatars() {
-    const loaded = new Map();
+    const loaded = new Map([...this.memberAvatars].filter(([userId]) => this.memberAvatarPaths.has(userId)));
     await Promise.all([...this.memberAvatarPaths].map(async ([userId, path]) => {
+      if (loaded.has(userId) && this.memberAvatarLoadedPaths.get(userId) === path) return;
       try {
         const avatar = await this.downloadAvatar(path);
-        if (avatar) loaded.set(userId, avatar);
+        if (avatar) {
+          loaded.set(userId, avatar);
+          this.memberAvatarLoadedPaths.set(userId, path);
+        }
       } catch {
-        // Старые настройки Supabase могут не разрешать чтение аватара партнёра.
+        // Не стираем уже показанный аватар при временной ошибке сети.
       }
     }));
     this.memberAvatars = loaded;
@@ -231,7 +237,7 @@ class BeerDiaryCloud {
 
   async uploadAvatar(dataUrl) {
     const blob = await (await fetch(dataUrl)).blob();
-    const path = `${this.session.user.id}/avatar.jpg`;
+    const path = `${this.session.user.id}/avatar-${Date.now()}.jpg`;
     await this.promiseRequest(this.client.storage.from('profile-avatars').upload(path, blob, {
       contentType: 'image/jpeg',
       cacheControl: '3600',
@@ -240,8 +246,9 @@ class BeerDiaryCloud {
     return path;
   }
 
-  async saveProfile(profile, avatarData = null) {
-    const avatarPath = avatarData ? await this.uploadAvatar(avatarData) : (this.profile?.avatar_path || null);
+  async saveProfile(profile, avatarData = null, knownAvatarPath = null) {
+    const previousAvatarPath = this.profile?.avatar_path || knownAvatarPath || this.memberAvatarPaths.get(this.session.user.id) || null;
+    const avatarPath = avatarData ? await this.uploadAvatar(avatarData) : previousAvatarPath;
     const row = {
       user_id: this.session.user.id,
       display_name: profile.displayName,
@@ -263,9 +270,15 @@ class BeerDiaryCloud {
       this.membership.display_name = profile.displayName;
       this.members.set(this.session.user.id, profile.displayName);
       if (avatarPath) this.memberAvatarPaths.set(this.session.user.id, avatarPath);
-      if (avatarData) this.memberAvatars.set(this.session.user.id, avatarData);
+      if (avatarData) {
+        this.memberAvatars.set(this.session.user.id, avatarData);
+        this.memberAvatarLoadedPaths.set(this.session.user.id, avatarPath);
+      }
     }
     this.profile = data;
+    if (avatarData && previousAvatarPath && previousAvatarPath !== avatarPath) {
+      this.client.storage.from('profile-avatars').remove([previousAvatarPath]).catch(() => {});
+    }
     return data;
   }
 
@@ -294,19 +307,17 @@ class BeerDiaryCloud {
     if (!entry.photo) return null;
     const blob = await (await fetch(entry.photo)).blob();
     const path = `${this.membership.household_id}/${this.session.user.id}/${entry.id}.jpg`;
-    const { error } = await this.client.storage.from('beer-labels').upload(path, blob, {
+    await this.promiseRequest(this.client.storage.from('beer-labels').upload(path, blob, {
       contentType: 'image/jpeg',
       cacheControl: '3600',
       upsert: true
-    });
-    if (error) throw error;
+    }));
     return path;
   }
 
   async downloadPhoto(path) {
     if (!path) return null;
-    const { data, error } = await this.client.storage.from('beer-labels').download(path);
-    if (error) throw error;
+    const data = await this.promiseRequest(this.client.storage.from('beer-labels').download(path));
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
@@ -318,7 +329,7 @@ class BeerDiaryCloud {
   async upsertEntry(entry, knownPhotoPath = null, existsRemotely = false) {
     const photoPath = entry.photo ? await this.uploadPhoto(entry) : null;
     if (!entry.photo && knownPhotoPath) {
-      await this.client.storage.from('beer-labels').remove([knownPhotoPath]);
+      await this.promiseRequest(this.client.storage.from('beer-labels').remove([knownPhotoPath]));
     }
     const row = {
       id: entry.id,
@@ -346,24 +357,33 @@ class BeerDiaryCloud {
     let request = existsRemotely
       ? this.client.from('beer_entries').update(row).eq('id', entry.id)
       : this.client.from('beer_entries').insert(row);
-    let { error } = await request;
+    let error;
+    try {
+      await this.dataRequest(request);
+    } catch (requestError) {
+      error = requestError;
+    }
     if (error && /barcode|column|schema cache/i.test(String(error.message || error))) {
       delete row.barcode;
       request = existsRemotely
         ? this.client.from('beer_entries').update(row).eq('id', entry.id)
         : this.client.from('beer_entries').insert(row);
-      ({ error } = await request);
+      try {
+        await this.dataRequest(request);
+        error = null;
+      } catch (requestError) {
+        error = requestError;
+      }
     }
     if (error) throw error;
     return { ...row, photo_path: photoPath };
   }
 
   async deleteEntry(id, updatedAt) {
-    const { error } = await this.client
+    await this.dataRequest(this.client
       .from('beer_entries')
       .update({ deleted_at: new Date().toISOString(), client_updated_at: updatedAt, updated_at: new Date().toISOString() })
-      .eq('id', id);
-    if (error) throw error;
+      .eq('id', id));
   }
 
   subscribe(onChange) {
