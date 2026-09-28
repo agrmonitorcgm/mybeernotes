@@ -1,4 +1,4 @@
-const CACHE_NAME='beer-diary-v17';
+const CACHE_NAME='beer-diary-v18';
 const APP_SHELL=['./','./index.html','./config.js','./sync.js?v=16','./manifest.webmanifest','./icon-192.png','./icon-512.png'];
 
 self.addEventListener('install',event=>{
