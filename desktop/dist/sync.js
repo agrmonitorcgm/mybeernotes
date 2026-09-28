@@ -1,5 +1,10 @@
 'use strict';
 
+function isAbortLike(error) {
+  const value = String(error?.message || error || '');
+  return error?.name === 'AbortError' || /aborterror|signal is aborted|aborted without reason/i.test(value);
+}
+
 class BeerDiaryCloud {
   constructor(config) {
     this.url = String(config?.supabaseUrl || '').replace(/\/$/, '');
@@ -67,7 +72,7 @@ class BeerDiaryCloud {
     return data;
   }
 
-  async authRequest(path, options, timeoutMs = 30000) {
+  async authRequest(path, options, timeoutMs = 45000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -84,7 +89,7 @@ class BeerDiaryCloud {
       if (!response.ok) throw Error(data.msg || data.message || data.error_description || data.error || `Ошибка сервера ${response.status}`);
       return data;
     } catch (error) {
-      if (error?.name === 'AbortError') throw Error('Сервер Supabase отвечает слишком долго. Попробуйте ещё раз через минуту.');
+      if (isAbortLike(error)) throw Error('Сервер Supabase отвечает слишком долго. Попробуйте ещё раз через минуту.');
       throw error;
     } finally {
       clearTimeout(timer);
@@ -128,7 +133,7 @@ class BeerDiaryCloud {
     this.memberAvatars.clear();
   }
 
-  async dataRequest(request, timeoutMs = 30000) {
+  async dataRequest(request, timeoutMs = 45000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {
@@ -137,8 +142,22 @@ class BeerDiaryCloud {
       if (result.error) throw result.error;
       return result.data;
     } catch (error) {
-      if (error?.name === 'AbortError') throw Error('Синхронизация не получила ответ от Supabase за 30 секунд. Записи сохранены на устройстве.');
+      if (isAbortLike(error)) throw Error('Синхронизация не получила ответ от Supabase. Записи сохранены на устройстве — попробуйте ещё раз через минуту.');
       throw error;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async promiseRequest(request, timeoutMs = 45000) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => reject(Error('Сервер Supabase отвечает слишком долго. Данные сохранены на устройстве.')), timeoutMs);
+    });
+    try {
+      const result = await Promise.race([request, timeout]);
+      if (result?.error) throw result.error;
+      return result?.data;
     } finally {
       clearTimeout(timer);
     }
@@ -201,8 +220,7 @@ class BeerDiaryCloud {
 
   async downloadAvatar(path) {
     if (!path) return null;
-    const { data, error } = await this.client.storage.from('profile-avatars').download(path);
-    if (error) throw error;
+    const data = await this.promiseRequest(this.client.storage.from('profile-avatars').download(path));
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(reader.result);
@@ -214,12 +232,11 @@ class BeerDiaryCloud {
   async uploadAvatar(dataUrl) {
     const blob = await (await fetch(dataUrl)).blob();
     const path = `${this.session.user.id}/avatar.jpg`;
-    const { error } = await this.client.storage.from('profile-avatars').upload(path, blob, {
+    await this.promiseRequest(this.client.storage.from('profile-avatars').upload(path, blob, {
       contentType: 'image/jpeg',
       cacheControl: '3600',
       upsert: true
-    });
-    if (error) throw error;
+    }));
     return path;
   }
 
@@ -235,18 +252,14 @@ class BeerDiaryCloud {
       avatar_path: avatarPath,
       updated_at: new Date().toISOString()
     };
-    const { data, error } = await this.client.from('profiles').upsert(row).select().single();
-    if (error) throw error;
+    const data = await this.dataRequest(this.client.from('profiles').upsert(row).select().single());
     if (this.membership) {
-      let { error: memberError } = await this.client.from('household_members')
-        .update({ display_name: profile.displayName, avatar_path: avatarPath })
-        .eq('user_id', this.session.user.id);
-      if (memberError && /avatar_path|column|schema cache/i.test(String(memberError.message || memberError))) {
-        ({ error: memberError } = await this.client.from('household_members')
-          .update({ display_name: profile.displayName })
-          .eq('user_id', this.session.user.id));
+      try{
+        await this.dataRequest(this.client.from('household_members').update({ display_name: profile.displayName, avatar_path: avatarPath }).eq('user_id', this.session.user.id));
+      }catch(memberError){
+        if (!/avatar_path|column|schema cache/i.test(String(memberError?.message || memberError))) throw memberError;
+        await this.dataRequest(this.client.from('household_members').update({ display_name: profile.displayName }).eq('user_id', this.session.user.id));
       }
-      if (memberError) throw memberError;
       this.membership.display_name = profile.displayName;
       this.members.set(this.session.user.id, profile.displayName);
       if (avatarPath) this.memberAvatarPaths.set(this.session.user.id, avatarPath);

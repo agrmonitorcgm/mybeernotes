@@ -97,7 +97,7 @@ dialog{background:#fff8dd;border:2px solid #eadca4;border-bottom-width:6px;borde
 <dialog id="scanner-dialog" aria-labelledby="scanner-title"><div class="modal-head"><h2 id="scanner-title">Сканирование</h2><button class="quiet close" id="scanner-head-close" aria-label="Закрыть">×</button></div><div class="scanner-body"><div id="barcode-reader" class="scanner-reader"></div><p id="scanner-status" class="scanner-status" role="status">Готовим камеру…</p><div class="scanner-actions"><button type="button" id="scanner-manual">Ввести вручную</button><button type="button" id="scanner-close">Отмена</button></div></div></dialog>
 <dialog id="detail-dialog" aria-labelledby="detail-title"><div class="modal-head"><h2 id="detail-title">Подробности</h2><button class="quiet close" id="detail-head-close" aria-label="Закрыть">×</button></div><div id="detail-content" class="detail-body"></div><div class="detail-actions"><button type="button" class="primary" id="detail-edit">Редактировать</button><button type="button" class="danger" id="detail-delete">Удалить</button><button type="button" id="detail-close">Закрыть</button></div></dialog>
 <dialog id="photo-viewer" aria-label="Фото этикетки"><button type="button" class="photo-viewer-close" id="photo-viewer-close" aria-label="Закрыть">×</button><img id="photo-viewer-image" class="photo-viewer-image" alt="Этикетка пива"></dialog>
-<script src="./config.js"></script><script src="./sync.js?v=16"></script><script>
+<script src="./config.js"></script><script src="./sync.js?v=19"></script><script>
 'use strict';
 const PRIMARY_TAGS=['горький','сладкий','кислый','хмельной','фруктовый'];
 const TAGS=[...PRIMARY_TAGS,'мягкий','цветочный','терпкий','крепкий','хлебный','с горчинкой','медовый','легкий','говно','ссанина','жженый','карамельный','цитрусовый','кофейный','шоколадный','дымный','пряный','сухой','водянистый','освежающий'];
@@ -275,6 +275,7 @@ function cloudError(error){
  if(/rate limit|security purposes/i.test(value))return'Письмо уже отправлялось недавно. Подождите немного и попробуйте снова.';
  if(/password should be at least/i.test(value))return'Пароль должен содержать не меньше 6 символов.';
  if(/profiles|profile-avatars/i.test(value)&&/not found|does not exist|schema cache/i.test(value))return'Сначала обновите структуру базы Supabase для профилей.';
+ if(/aborterror|signal is aborted|aborted without reason/i.test(value))return'Supabase отвечает слишком долго. Данные на устройстве сохранены — попробуйте синхронизацию ещё раз через минуту.';
  if(/supabase отвечает слишком долго/i.test(value))return value;
  if(/link.*expired|token.*expired|otp_expired|ссылка восстановления устарела/i.test(value))return'Ссылка восстановления устарела. Запросите новое письмо.';
  return value||'Не удалось выполнить операцию.';
@@ -293,30 +294,41 @@ async function saveCloudPassword(password){
  return data;
 }
 function householdInfo(){const value=cloud.membership?.households;return Array.isArray(value)?value[0]:value;}
+const PROFILE_CACHE_PREFIX='beer-diary-profile-v1:';
+function readProfileCache(){
+ const userId=cloud.session?.user?.id;if(!userId)return null;
+ try{const value=JSON.parse(localStorage.getItem(PROFILE_CACHE_PREFIX+userId)||'null');if(!value||typeof value.displayName!=='string'||!value.displayName.trim()||value.displayName.length>60)return null;if(value.avatarData&&!safePhoto(value.avatarData))value.avatarData=null;return value;}catch{return null;}
+}
+function writeProfileCache(value){
+ const userId=cloud.session?.user?.id;if(!userId)return false;
+ try{localStorage.setItem(PROFILE_CACHE_PREFIX+userId,JSON.stringify({...value,updatedAt:Date.now()}));return true;}catch{return false;}
+}
 function showProfileAvatar(){const hasAvatar=safePhoto(profileAvatarData);$('profile-avatar').hidden=!hasAvatar;$('avatar-placeholder').hidden=hasAvatar;if(hasAvatar)$('profile-avatar').src=profileAvatarData;else $('profile-avatar').removeAttribute('src');$('profile-avatar-pick').textContent=hasAvatar?'Сменить аватар':'Добавить аватар';}
+function applyProfileUi(profile){$('profile-name').value=profile.displayName||'';$('profile-heading').textContent=profile.displayName||'Профиль';$('profile-gender').value=profile.gender||'';$('profile-age').value=profile.age??'';$('profile-country').value=countryDisplay(profile.birthCountry||'');$('profile-party').value=profile.politicalParty||'';profileAvatarData=profile.avatarData||null;profileAvatarDirty=!!profile.avatarDirty;showProfileAvatar();}
 async function loadProfileUi(){
- const generation=++profileLoadGeneration;
- profileMessage('Загружаем профиль…');$('profile-email').textContent=cloud.session?.user?.email||'';
+ const generation=++profileLoadGeneration,cached=readProfileCache();$('profile-email').textContent=cloud.session?.user?.email||'';
+ if(cached){applyProfileUi(cached);profileMessage(cached.pending?'Профиль сохранён на этом устройстве и ожидает отправки на сервер.':'Загружаем профиль…');}
+ else{applyProfileUi({displayName:cloud.membership?.display_name||loginName(cloud.session?.user?.email)});profileMessage('Загружаем профиль…');}
  try{
   const profile=await cloud.loadProfile();if(generation!==profileLoadGeneration)return;
-  const name=profile?.display_name||cloud.membership?.display_name||loginName(cloud.session?.user?.email);
-  $('profile-name').value=name;$('profile-heading').textContent=name;$('profile-gender').value=profile?.gender||'';$('profile-age').value=profile?.age??'';$('profile-country').value=countryDisplay(profile?.birth_country||'');$('profile-party').value=profile?.political_party||'';
-  profileAvatarData=null;profileAvatarDirty=false;showProfileAvatar();
-  if(profile?.avatar_path){try{const avatar=await cloud.downloadAvatar(profile.avatar_path);if(generation===profileLoadGeneration){profileAvatarData=avatar;showProfileAvatar();cloud.memberAvatars?.set(cloud.session.user.id,avatar);render();}}catch{/* Профиль остаётся доступен без изображения. */}}
-  if(generation===profileLoadGeneration)profileMessage('');
- }catch(error){if(generation===profileLoadGeneration)profileMessage(cloudError(error),true);}
+  if(cached?.pending){profileMessage('Профиль сохранён на этом устройстве. Нажмите «Сохранить профиль», чтобы повторить отправку.');return;}
+  const current={displayName:profile?.display_name||cloud.membership?.display_name||loginName(cloud.session?.user?.email),gender:profile?.gender||'',age:profile?.age??null,birthCountry:profile?.birth_country||'',politicalParty:profile?.political_party||'',avatarData:cached?.avatarPath===profile?.avatar_path?cached.avatarData||null:null,avatarPath:profile?.avatar_path||null,avatarDirty:false,pending:false};
+  if(profile?.avatar_path&&!current.avatarData){try{current.avatarData=await cloud.downloadAvatar(profile.avatar_path);}catch{/* Профиль остаётся доступен без изображения. */}}
+  if(generation!==profileLoadGeneration)return;applyProfileUi(current);writeProfileCache(current);if(current.avatarData)cloud.memberAvatars?.set(cloud.session.user.id,current.avatarData);render();profileMessage('');
+ }catch(error){if(generation===profileLoadGeneration)profileMessage(cached?'Показана сохранённая на устройстве копия. Supabase пока не ответил.':cloudError(error),!cached);}
 }
 async function saveProfileUi(){
  const displayName=$('profile-name').value.trim(),rawAge=$('profile-age').value.trim();
  if(!displayName){profileMessage('Введите отображаемое имя.',true);$('profile-name').focus();return;}
  const age=rawAge===''?null:Number(rawAge);if(age!==null&&(!Number.isInteger(age)||age<1||age>120)){profileMessage('Возраст должен быть целым числом от 1 до 120.',true);$('profile-age').focus();return;}
  const profile={displayName,gender:$('profile-gender').value,age,birthCountry:plainCountry($('profile-country').value),politicalParty:$('profile-party').value.trim()};
- $('save-profile').disabled=true;$('profile-avatar-pick').disabled=true;profileMessage('Сохраняем профиль…');
+ const previous=readProfileCache(),cached={...profile,avatarData:profileAvatarData,avatarPath:cloud.profile?.avatar_path||previous?.avatarPath||null,avatarDirty:profileAvatarDirty,pending:true};
+ const cachedLocally=writeProfileCache(cached);$('profile-heading').textContent=displayName;$('save-profile').disabled=true;$('profile-avatar-pick').disabled=true;profileMessage('Сохраняем профиль…');
  try{
-  await cloud.saveProfile(profile,profileAvatarDirty?profileAvatarData:null);profileAvatarDirty=false;$('profile-heading').textContent=displayName;
+  const saved=await cloud.saveProfile(profile,profileAvatarDirty?profileAvatarData:null);profileAvatarDirty=false;writeProfileCache({...cached,avatarPath:saved?.avatar_path||cached.avatarPath,avatarDirty:false,pending:false});
   const userId=cloud.session.user.id,renamed=entries.filter(entry=>entry.createdBy===userId&&entry.authorName!==displayName);for(const entry of renamed){entry.authorName=displayName;await saveLocal(entry);}render();
-  profileMessage('Профиль сохранён.');
- }catch(error){profileMessage(cloudError(error),true);}finally{$('save-profile').disabled=false;$('profile-avatar-pick').disabled=false;}
+  profileMessage('Профиль сохранён и отправлен на сервер.');
+ }catch(error){profileMessage(cachedLocally?'Профиль сохранён на этом устройстве. Supabase пока не ответил — повторите отправку позже.':cloudError(error),!cachedLocally);}finally{$('save-profile').disabled=false;$('profile-avatar-pick').disabled=false;}
 }
 async function remoteEntry(row,local){
  let photo=local?.remotePhotoPath===row.photo_path&&local?.photo?local.photo:null;
@@ -395,7 +407,7 @@ async function refreshCloudState(){
   cloudViews('connected-view');
   const household=householdInfo();
   $('invite-code').textContent=household?.invite_code||'';cloudMessage('');loadProfileUi();
-  await syncNow(true);
+  syncNow(true);
  }catch(error){cloudMessage(cloudError(error),true);}
 }
 function setCloudBusy(value){['sign-in','sign-up','forgot-password','save-new-password','create-diary','join-diary','sign-out','logout-before-join','save-profile','profile-avatar-pick'].forEach(id=>$(id).disabled=value);}
